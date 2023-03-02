@@ -15,7 +15,7 @@
 namespace fine {
 
 class TwoPlTest : public ::testing::Test {
- protected:
+protected:
   void SetUp() override {
     for (uint32_t i = 0; i < kMaxValue; i++) {
       vector.push_back(i);
@@ -34,41 +34,56 @@ class TwoPlTest : public ::testing::Test {
     delete exec;
   }
 
- protected:
-  Storage* exec{nullptr};
-  LockManager* lock_manager_;
-  TransactionManager* txn_manager_;
+protected:
+  Storage *exec{nullptr};
+  LockManager *lock_manager_;
+  TransactionManager *txn_manager_;
   std::vector<uint32_t> vector;
 };
 
 TEST_F(TwoPlTest, DISABLED_oneWorker) {
   int i = 0, j = 3;
 
-  Transaction* txn = txn_manager_->Begin();
+  Transaction *txn = txn_manager_->Begin();
   exec->Put(txn, i, j);
-  txn_manager_->Commit(txn);
+  std::vector<uint32_t> v;
+  exec->Get(txn, 0, &v);
+  uint32_t res = 0;
+  for (auto n : v) {
+    res += n;
+  }
+  exec->Put(txn, j, res);
 
-  ASSERT_EQ(0, exec->Get(0));
-  ASSERT_EQ(1, exec->Get(1));
-  ASSERT_EQ(2, exec->Get(2));
-  ASSERT_EQ(3, exec->Get(3));
+  txn_manager_->Commit(txn);
 }
 
 TEST_F(TwoPlTest, twoWorker) {
   std::thread worker1([&]() -> void {
-    Transaction* txn = txn_manager_->Begin();
+    Transaction *txn = txn_manager_->Begin();
     for (int k = 0; k < kOptCnt; k++) {
       int i = RANDOM(kMinValue, kMaxValue), j = RANDOM(kMinValue, kMaxValue);
-      exec->Put(txn, i, j);
+      std::vector<uint32_t> v;
+      exec->Get(txn, i, &v);
+      uint32_t res = 0;
+      for (auto n : v) {
+        res += n;
+      }
+      exec->Put(txn, j, res);
     }
     txn_manager_->Commit(txn);
   });
 
   std::thread worker2([&]() -> void {
-    Transaction* txn = txn_manager_->Begin();
+    Transaction *txn = txn_manager_->Begin();
     for (int k = 0; k < kOptCnt; k++) {
       int i = RANDOM(kMinValue, kMaxValue), j = RANDOM(kMinValue, kMaxValue);
-      exec->Put(txn, i, j);
+      std::vector<uint32_t> v;
+      exec->Get(txn, i, &v);
+      uint32_t res = 0;
+      for (auto n : v) {
+        res += n;
+      }
+      exec->Put(txn, j, res);
     }
     txn_manager_->Commit(txn);
   });
@@ -79,24 +94,52 @@ TEST_F(TwoPlTest, twoWorker) {
 
 TEST_F(TwoPlTest, DISABLED_threeWorker) {
   std::thread worker1([&]() -> void {
-    Transaction* txn = txn_manager_->Begin();
+    Transaction *txn = txn_manager_->Begin();
     for (int k = 0; k < kOptCnt; k++) {
       int i = RANDOM(kMinValue, kMaxValue), j = RANDOM(kMinValue, kMaxValue);
-      exec->Put(txn, i, j);
+      std::vector<uint32_t> v;
+      exec->Get(txn, i, &v);
+      uint32_t res = 0;
+      for (auto n : v) {
+        res += n;
+      }
+      exec->Put(txn, j, res);
     }
     txn_manager_->Commit(txn);
   });
 
   std::thread worker2([&]() -> void {
-    Transaction* txn = txn_manager_->Begin();
+    Transaction *txn = txn_manager_->Begin();
     for (int k = 0; k < kOptCnt; k++) {
       int i = RANDOM(kMinValue, kMaxValue), j = RANDOM(kMinValue, kMaxValue);
-      exec->Put(txn, i, j);
+      std::vector<uint32_t> v;
+      exec->Get(txn, i, &v);
+      uint32_t res = 0;
+      for (auto n : v) {
+        res += n;
+      }
+      exec->Put(txn, j, res);
+    }
+    txn_manager_->Commit(txn);
+  });
+
+  std::thread worker3([&]() -> void {
+    Transaction *txn = txn_manager_->Begin();
+    for (int k = 0; k < kOptCnt; k++) {
+      int i = RANDOM(kMinValue, kMaxValue), j = RANDOM(kMinValue, kMaxValue);
+      std::vector<uint32_t> v;
+      exec->Get(txn, i, &v);
+      uint32_t res = 0;
+      for (auto n : v) {
+        res += n;
+      }
+      exec->Put(txn, j, res);
     }
     txn_manager_->Commit(txn);
   });
 
   worker1.join();
   worker2.join();
+  worker3.join();
 }
-}  // namespace fine
+} // namespace fine
